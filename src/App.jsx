@@ -1,12 +1,8 @@
 import HomeMade from "./components/OptimisticHomeMade";
+import OptimisticReactQuery from "./components/OptimisticReactQuery";
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import ReactQuery from "./components/OptimisticReactQuery";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +12,7 @@ function App() {
     <>
       <QueryClientProvider client={queryClient}>
         <h1 className="mx-auto w-full">Optimistic</h1>
-        <HomeMade />
+        <OptimisticReactQuery />
       </QueryClientProvider>
     </>
   );

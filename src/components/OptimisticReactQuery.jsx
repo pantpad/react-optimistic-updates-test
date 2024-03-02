@@ -1,46 +1,64 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { useState } from "react";
 
-function APICall(likes) {
+let currentLikes = 0;
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+function APICall() {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
+      currentLikes++;
       resolve({
-        totalLikes: likes + 1,
+        totalLikes: currentLikes,
       });
-    }, 500);
+    }, 1000);
   });
 }
 
-export default function HomeMade() {
-  console.log("renderHomeMade");
-  const [likes, setLikes] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function OptimisticReactQuery() {
+  console.log("renderReactQuery");
+  const queryClient = useQueryClient();
 
-  async function handleClick() {
-    setLikes((prevLikes) => prevLikes + 1);
-    try {
-      setIsLoading(true);
-      const response = await APICall(likes);
-      setLikes(response.totalLikes);
-    } catch (error) {
-      setError(error);
-      setLikes(likes);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const { data } = useQuery({
+    queryKey: ["likes"],
+    queryFn: () => currentLikes,
+  });
+
+  const { mutate, status } = useMutation({
+    mutationFn: async () => {
+      const response = await APICall();
+      return response;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries(["likes"]);
+
+      // A mutation is about to happen!
+      // Optionally return a context containing data to use when for example rolling back
+      const previousLikes = queryClient.getQueryData(["likes"]);
+
+      queryClient.setQueryData(["likes"], (previousLikes || 0) + 1);
+
+      return previousLikes;
+    },
+    onError: (error, variables, context) => {
+      // An error happened!
+      queryClient.setQueryData(["likes"], () => context?.previousLikes);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(["likes"]);
+    },
+  });
 
   return (
     <section className="mt-4">
-      <p className="mb-2 text-xl">Likes: {likes}</p>
-      <button onClick={handleClick} disabled={isLoading}>
+      <p className="mb-2 text-xl">Likes:{data}</p>
+      <button onClick={() => mutate()} disabled={status === "pending"}>
         <LikeSvg
-          className={`${isLoading ? "scale-110 drop-shadow-md" : ""} transition-all duration-300 ease-out`}
+          className={`${status === "pending" ? "scale-110 drop-shadow-md" : ""} transition-all duration-300 ease-out`}
         />
       </button>
-      {error ? <p>An error occurred!</p> : null}
+      {status === "error" ? <p>An error occurred!</p> : null}
     </section>
   );
 }
