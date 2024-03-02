@@ -37,11 +37,12 @@ export default function OptimisticReactQuery() {
       // Optionally return a context containing data to use when for example rolling back
       const previousLikes = queryClient.getQueryData(["likes"]);
 
-      queryClient.setQueryData(["likes"], (previousLikes || 0) + 1);
+      queryClient.setQueryData(["likes"], previousLikes + 1);
 
       return previousLikes;
     },
     onError: (error, variables, context) => {
+      console.log(context);
       // An error happened!
       queryClient.setQueryData(["likes"], () => context?.previousLikes);
     },
