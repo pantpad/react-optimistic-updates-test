@@ -1,8 +1,8 @@
-import HomeMade from "./components/OptimisticHomeMade";
+// import HomeMade from "./components/OptimisticHomeMade";
 import OptimisticReactQuery from "./components/OptimisticReactQuery";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ReactQuery from "./components/OptimisticReactQuery";
+// import ReactQuery from "./components/OptimisticReactQuery";
 
 const queryClient = new QueryClient();
 

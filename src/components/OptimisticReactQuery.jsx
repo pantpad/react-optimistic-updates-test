@@ -5,14 +5,22 @@ let currentLikes = 0;
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-function APICall() {
+function APICall(toReject = false) {
   return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      currentLikes++;
-      resolve({
-        totalLikes: currentLikes,
-      });
-    }, 1000);
+    if (toReject) {
+      setTimeout(() => {
+        reject({
+          totalLikes: currentLikes,
+        });
+      }, 1000);
+    } else {
+      setTimeout(() => {
+        currentLikes++;
+        resolve({
+          totalLikes: currentLikes,
+        });
+      }, 1000);
+    }
   });
 }
 
@@ -51,12 +59,51 @@ export default function OptimisticReactQuery() {
     },
   });
 
+  const { mutate: mutateErr, status: statusErr } = useMutation({
+    mutationFn: async () => {
+      const response = await APICall(true);
+      console.log("response");
+      return response;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries(["likes"]);
+
+      // A mutation is about to happen!
+      // Optionally return a context containing data to use when for example rolling back
+      const previousLikes = queryClient.getQueryData(["likes"]);
+      queryClient.setQueryData(["likes"], previousLikes + 1);
+
+      return previousLikes;
+    },
+    onError: (error, variables, context) => {
+      console.log(context);
+      // An error happened!
+      queryClient.setQueryData(["likes"], () => context?.previousLikes);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(["likes"]);
+    },
+  });
+
   return (
-    <section className="mt-4">
+    <section className="mt-4 flex flex-col items-center justify-center">
       <p className="mb-2 text-xl">Likes:{data}</p>
-      <button onClick={() => mutate()} disabled={status === "pending"}>
+      <button
+        onClick={() => mutate()}
+        disabled={status === "pending"}
+        className="mb-2 block"
+      >
         <LikeSvg
           className={`${status === "pending" ? "scale-110 drop-shadow-md" : ""} transition-all duration-300 ease-out`}
+        />
+      </button>
+      <button
+        onClick={() => mutateErr()}
+        disabled={statusErr === "pending"}
+        className="block"
+      >
+        <LikeSvg
+          className={`${statusErr === "pending" ? "scale-110 drop-shadow-md" : ""} rotate-180 transition-all duration-300 ease-out `}
         />
       </button>
       {status === "error" ? <p>An error occurred!</p> : null}
@@ -67,10 +114,9 @@ export default function OptimisticReactQuery() {
 function LikeSvg({ className }) {
   console.log("renderSVG");
   return (
-    <div className={`${className}`}>
+    <div className={`${className} max-w-[128px]`}>
       <svg
-        width="128"
-        height="128"
+        width={128}
         style={{ enableBackground: "new 0 0 128 128" }}
         xmlns="http://www.w3.org/2000/svg"
         xmlnsXlink="http://www.w3.org/1999/xlink"
